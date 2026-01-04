@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Tetris Ultimate Fixed</title>
+    <title>Tetris</title>
     <style>
         :root {
             --bg-color: #0d0d12;
@@ -27,19 +27,6 @@
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-        }
-
-        /* Логгер ошибок (для отладки) */
-        #error-log {
-            position: fixed;
-            top: 0; left: 0; width: 100%;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            font-size: 12px;
-            padding: 5px;
-            z-index: 9999;
-            display: none;
-            pointer-events: none;
         }
 
         #main-wrapper {
@@ -77,13 +64,13 @@
         .ui-panel {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px; /* Чуть уменьшил отступы, чтобы всё влезло */
             width: 80px;
         }
 
         .stat-box {
             background: #1a1a20;
-            padding: 5px 8px;
+            padding: 4px 6px;
             border-radius: 6px;
             border-left: 3px solid var(--accent);
             display: flex;
@@ -91,8 +78,8 @@
             justify-content: center;
         }
 
-        .stat-label { font-size: 10px; color: #888; margin-bottom: 2px; }
-        .stat-value { font-size: 14px; font-weight: bold; }
+        .stat-label { font-size: 9px; color: #888; margin-bottom: 2px; }
+        .stat-value { font-size: 13px; font-weight: bold; }
 
         #btn-pause {
              background: #1a1a20;
@@ -134,7 +121,7 @@
             background: rgba(0, 240, 255, 0.1);
             border: 2px solid var(--accent);
             color: var(--accent);
-            padding: 20px 50px; /* Увеличил кнопку */
+            padding: 20px 50px;
             font-size: 22px;
             font-family: inherit;
             font-weight: bold;
@@ -199,8 +186,6 @@
 </head>
 <body>
 
-    <div id="error-log"></div>
-
     <div id="main-wrapper">
         <div id="game-area">
             <canvas id="tetris" width="240" height="400"></canvas>
@@ -214,6 +199,10 @@
                 <div class="stat-box">
                     <div class="stat-label">СЧЕТ</div>
                     <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">УРОВЕНЬ</div>
+                    <div class="stat-value" id="level">1</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">ЛИН.</div>
@@ -256,14 +245,6 @@
     </div>
 
     <script>
-        // --- ОТЛОВ ОШИБОК ---
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const log = document.getElementById('error-log');
-            log.style.display = 'block';
-            log.innerHTML += `ERROR: ${msg} <br>`;
-            return false;
-        };
-
         const canvas = document.getElementById('tetris');
         const context = canvas.getContext('2d');
         const nextCanvas = document.getElementById('next');
@@ -514,13 +495,9 @@
             }
         }
 
-        // --- ИСПРАВЛЕННАЯ ЛОГИКА ОВЕРЛЕЕВ ---
         function showOverlay(id) {
-            // 1. Скрываем все оверлеи
             const overlays = document.querySelectorAll('.overlay');
             overlays.forEach(el => el.classList.add('hidden'));
-            
-            // 2. Если ID передан, показываем нужный
             if (id) {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('hidden');
@@ -561,11 +538,13 @@
                 player.level = 1;
                 player.next = null;
                 dropInterval = 1000;
-                updateScore();
+                
+                // Теперь элементы существуют, ошибки не будет
+                updateScore(); 
                 playerReset();
                 
                 gameState = 'playing';
-                showOverlay(null); // Скрыть меню (вызывало ошибку раньше)
+                showOverlay(null); 
                 
                 lastTime = performance.now();
                 update();
@@ -580,7 +559,6 @@
             if(!btn) return;
             
             const handler = (e) => {
-                // Важно для мобилок: блокируем стандартный клик и двойной тап
                 if (e.type === 'touchstart') e.preventDefault(); 
                 e.stopPropagation();
                 vibrate(20);
@@ -618,7 +596,6 @@
             btn.addEventListener('mouseleave', stop);
         }
 
-        // Привязка кнопок меню
         bindBtn('btn-start', startGame);
         bindBtn('btn-restart', startGame);
         
@@ -642,14 +619,12 @@
              showOverlay('menu-overlay');
         });
 
-        // Игровые кнопки
         bindGameControl('btn-left', () => playerMove(-1), 100);
         bindGameControl('btn-right', () => playerMove(1), 100);
         bindGameControl('btn-down', () => playerDrop(), 50);
         bindGameControl('btn-rotate', () => playerRotate(1), null);
         bindGameControl('btn-harddrop', () => playerHardDrop(), null);
 
-        // Клавиатура
         document.addEventListener('keydown', event => {
             if (gameState !== 'playing') return;
             if (event.keyCode === 37) playerMove(-1);
@@ -662,11 +637,9 @@
             }
         });
 
-        // Инициализация
         document.getElementById('menu-highscore').innerText = localStorage.getItem('tetris_high') || 0;
         document.getElementById('highscore').innerText = localStorage.getItem('tetris_high') || 0;
         
-        // Первый рендер (фон)
         draw();
 
     </script>
