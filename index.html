@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Tetris</title>
+    <title>Neon Tetris Smart Control</title>
     <style>
         :root {
             --bg-color: #0d0d12;
@@ -47,6 +47,7 @@
             gap: 10px;
             align-items: flex-start;
             justify-content: center;
+            width: 100%;
         }
 
         canvas {
@@ -59,13 +60,16 @@
             border: 2px solid #333;
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
             z-index: 1;
+            /* Большой размер поля */
+            height: 65dvh; 
+            width: auto;
         }
 
         .ui-panel {
             display: flex;
             flex-direction: column;
-            gap: 6px; /* Чуть уменьшил отступы, чтобы всё влезло */
-            width: 80px;
+            gap: 6px;
+            width: 75px;
         }
 
         .stat-box {
@@ -178,7 +182,7 @@
         #btn-right { grid-column: 3; grid-row: 2; }
 
         @media (max-width: 600px) {
-            #tetris { height: 50dvh; width: auto; }
+            #tetris { height: 60dvh; width: auto; }
             .ui-panel { width: 70px; }
             canvas#next { width: 60px; height: 60px; }
         }
@@ -188,7 +192,7 @@
 
     <div id="main-wrapper">
         <div id="game-area">
-            <canvas id="tetris" width="240" height="400"></canvas>
+            <canvas id="tetris" width="280" height="480"></canvas>
             
             <div class="ui-panel">
                 <div id="btn-pause">❚❚ ПАУЗА</div>
@@ -275,7 +279,7 @@
             if (type === 'T') return [[0, 7, 0], [7, 7, 7], [0, 0, 0]];
         }
 
-        const arena = createMatrix(12, 20);
+        const arena = createMatrix(14, 24);
         const player = {
             pos: {x: 0, y: 0},
             matrix: null,
@@ -538,14 +542,10 @@
                 player.level = 1;
                 player.next = null;
                 dropInterval = 1000;
-                
-                // Теперь элементы существуют, ошибки не будет
                 updateScore(); 
                 playerReset();
-                
                 gameState = 'playing';
                 showOverlay(null); 
-                
                 lastTime = performance.now();
                 update();
             } catch (e) {
@@ -553,39 +553,47 @@
             }
         }
 
-        // --- Управление ---
         function bindBtn(id, action) {
             const btn = document.getElementById(id);
             if(!btn) return;
-            
             const handler = (e) => {
                 if (e.type === 'touchstart') e.preventDefault(); 
                 e.stopPropagation();
                 vibrate(20);
                 action();
             };
-
             btn.addEventListener('touchstart', handler, {passive: false});
             btn.addEventListener('click', handler); 
         }
 
-        function bindGameControl(id, action, interval) {
+        // Улучшенная функция с задержкой перед повтором
+        function bindGameControl(id, action, interval, initialDelay = 250) {
             const btn = document.getElementById(id);
             if(!btn) return;
 
-            let timer;
+            let loopTimer;
+            let delayTimer;
             
             const start = (e) => {
                 if(gameState !== 'playing') return;
                 if(e.cancelable) e.preventDefault();
                 vibrate(15);
+                
+                // 1. Срабатывает сразу 1 раз
                 action();
-                if(interval) timer = setInterval(action, interval);
+
+                // 2. Если есть интервал, ждем паузу перед запуском серии
+                if(interval) {
+                    delayTimer = setTimeout(() => {
+                        loopTimer = setInterval(action, interval);
+                    }, initialDelay);
+                }
             };
             
             const stop = (e) => {
                 if(e.cancelable) e.preventDefault();
-                clearInterval(timer);
+                clearTimeout(delayTimer); // Отменяем ожидание
+                clearInterval(loopTimer); // Отменяем серию
             };
 
             btn.addEventListener('touchstart', start, {passive: false});
@@ -619,9 +627,13 @@
              showOverlay('menu-overlay');
         });
 
-        bindGameControl('btn-left', () => playerMove(-1), 100);
-        bindGameControl('btn-right', () => playerMove(1), 100);
-        bindGameControl('btn-down', () => playerDrop(), 50);
+        // Настройка кнопок
+        bindGameControl('btn-left', () => playerMove(-1), null);
+        bindGameControl('btn-right', () => playerMove(1), null);
+        
+        // ВНИЗ: Интервал 50мс (очень быстро), но задержка перед стартом 250мс
+        bindGameControl('btn-down', () => playerDrop(), 50, 250);
+        
         bindGameControl('btn-rotate', () => playerRotate(1), null);
         bindGameControl('btn-harddrop', () => playerHardDrop(), null);
 
